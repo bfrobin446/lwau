@@ -17,13 +17,15 @@ class Mod:
     def __init__(self, local_version_path):
         self.local_version_path = local_version_path
         try:
-            self.local_version_data = json.load(open(self.local_version_path))
+            self.local_version_data = json.load(open(self.local_version_path,
+                encoding='utf-8-sig'))
             self.installed_version = Version(
                     **self.local_version_data["VERSION"])
 
             self.master_version_url = self.local_version_data["URL"]
             self.master_version_data = json.load(
-                    codecs.getreader('utf-8')(urlopen(self.master_version_url)))
+                    codecs.getreader('utf-8-sig')(
+                        urlopen(self.master_version_url)))
             self.available_version = Version(
                     **self.master_version_data["VERSION"])
         except Exception as e:
