@@ -9,6 +9,8 @@ import functools
 import json
 import os
 import pathlib
+import re
+import shutil
 import sys
 import traceback
 import webbrowser
@@ -60,6 +62,15 @@ class Mod:
         self.find_download()
 
         if self.archive_url is None:
+            return False
+
+        if self.local_version_path not in settings["recipes"]:
+            if "download_dir" not in settings:
+                print("No download location specified.")
+                return False
+
+            self.download_archive_to(settings["download_dir"])
+            print("Downloaded {}".format(self.local_archive))
             return False
 
         return True
@@ -147,6 +158,20 @@ class Mod:
                     wanted_version["download_path"], '', ''))
 
 
+    def download_archive_to(self, dest_dir):
+        response = urlopen(self.archive_url)
+
+        disposition = response.getheader("Content-disposition")
+        if disposition is not None:
+            filename = re.search(r'filename=(\S+)', disposition).group(1)
+        if disposition is None or filename is None:
+            filename = pathlib.PurePosixPath(
+                    urlsplit(response.geturl()).path).name
+
+        self.local_archive = pathlib.Path(dest_dir) / filename
+        shutil.copyfileobj(response, self.local_archive.open('xb'))
+
+
 #--------------------------------------------------------------------------
 
 
@@ -226,20 +251,46 @@ class Version:
 
 def main():
     import argparse
+    import textwrap
+
     arg_parser = argparse.ArgumentParser(
-        "Check AVC-enabled mods for updates and optionally attempt to install.",
+        description="Check AVC-enabled mods for updates and optionally attempt to install.",
         epilog='\n'.join((
             "Exit status:",
             "0: All checked mods are up-to-date.",
             "1: One or more updates available but not installed.",
-            "2: An error occurred."))
+            "2: An error occurred.")),
+        formatter_class = argparse.RawTextHelpFormatter
         )
-    arg_parser.add_argument("verb", choices=("check", "update"),
-            help="'check': List mods with updates available, but do not attempt to install. 'update': Attempt to install any available updates.")
+    arg_parser.add_argument("verb", choices=("check", "update", "download-to"),
+            help=textwrap.dedent('''\
+                check:  List mods with updates available, but do not
+                         attempt to install.
+                update: Attempt to download and install any available
+                         updates.
+                download-to: Set default download location. The
+                              selected location is saved in
+                              PluginData/lwau.json.
+                ''',
+                ))
     arg_parser.add_argument("target",
-            help="A .version file, or 'all' to process all .version files in GameData.")
+            help=textwrap.dedent('''\
+                If command is `check` or `update`, `target` is a
+                 .version file, or 'all' to process all .version files
+                 in GameData.
+                If command is `download-to`, `target` is the path to
+                 download archives that require manual installation.'''))
+
+    arg_parser.add_argument("-d", "--download-to", dest="download_dir",
+            help=textwrap.dedent('''\
+                    Location to download archives. Overrides the default
+                     path if one is set.'''))
 
     args = arg_parser.parse_args()
+
+    load_settings()
+    if args.download_dir is not None:
+        settings["download_dir"] = args.download_dir
 
     if args.verb == "check":
         if args.target == "all":
@@ -288,8 +339,20 @@ def main():
             else:
                 sys.exit(0)
 
+    elif args.verb == "download-to":
+        settings["download_dir"] = args.target
+        json.dump(settings, open("PluginData/lwau.json", 'w'))
+
 
 #--------------------------------------------------------------------------
+
+
+def load_settings():
+    global settings
+    try:
+        settings = json.load(open("PluginData/lwau.json"))
+    except:
+        settings = {'recipes':{}}
 
 
 def find_installed_mods():
