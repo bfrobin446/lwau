@@ -243,9 +243,10 @@ def main():
 
     if args.verb == "check":
         if args.target == "all":
-            need_updating = [m.check_update() for m in
-                    find_installed_mods()]
-            if any(need_updating):
+            need_updating = sum(m.check_update() for m in
+                    find_installed_mods())
+            print("{} packages have updates available.".format(need_updating))
+            if need_updating:
                 sys.exit(1)
             else:
                 sys.exit(0)
@@ -288,6 +289,9 @@ def main():
                 sys.exit(0)
 
 
+#--------------------------------------------------------------------------
+
+
 def find_installed_mods():
     for dir in os.walk("GameData"):
         for fname in dir[2]:
@@ -297,6 +301,9 @@ def find_installed_mods():
 
 def json_load_from_url(u):
     return json.load(codecs.getreader('utf-8-sig')(urlopen(u)))
+
+
+#--------------------------------------------------------------------------
 
 
 if __name__ == '__main__':
