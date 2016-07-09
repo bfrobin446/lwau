@@ -5,8 +5,10 @@
 
 
 import codecs
+import collections.abc
 import functools
 import json
+import numbers
 import os
 import pathlib
 import re
@@ -32,13 +34,13 @@ class Mod:
             self.local_version_data = json.load(open(self.local_version_path,
                 encoding='utf-8-sig'))
             self.installed_version = Version(
-                    **self.local_version_data["VERSION"])
+                    self.local_version_data["VERSION"])
 
             self.master_version_url = self.local_version_data["URL"]
             self.master_version_data = json_load_from_url(
                     self.master_version_url)
             self.available_version = Version(
-                    **self.master_version_data["VERSION"])
+                    self.master_version_data["VERSION"])
         except Exception as e:
             self.exception = traceback.TracebackException.from_exception(e)
         else:
@@ -181,22 +183,30 @@ class Mod:
 #  to None.
 @functools.total_ordering
 class Version:
-    # Our __init__ method accepts the keywords in all caps, as they appear in
-    #  the .version file.
-    def __init__(self,
-            major=None, minor=None, patch=None, build=None,
-            str=None, **kwargs):
-        if str is not None:
+    # As alternatives to constructing a Version from four integers, we can
+    # accept a dictionary of the type that would be found in a .version
+    # file, or a dot-separated string resembling what we return from our
+    # __str__ method.
+    def __init__(self, major_or_object,
+            minor=None, patch=None, build=None):
+        if isinstance(major_or_object, collections.abc.Mapping):
+            self.major = major_or_object.get("MAJOR")
+            self.minor = major_or_object.get("MINOR")
+            self.patch = major_or_object.get("PATCH")
+            self.build = major_or_object.get("BUILD")
+
+        elif isinstance(major_or_object, str):
             from itertools import zip_longest
-            parts = map(int, str.split('.'))
+            parts = map(int, major_or_object.split('.'))
             for member, val in zip_longest(("major", "minor", "patch",
                 "build"), parts):
                 setattr(self, member, val)
+        elif isinstance(major_or_object, numbers.Integral):
+            (self.major, self.minor, self.patch, self.build) = (major,
+                    minor, patch, build)
         else:
-            self.major = major or kwargs.get("MAJOR")
-            self.minor = minor or kwargs.get("MINOR")
-            self.patch = patch or kwargs.get("PATCH")
-            self.build = build or kwargs.get("BUILD")
+            raise TypeError("Can't create a Version from {}".format(
+                type(major_or_object)))
 
     # Equality is member-by-member. 
     def __eq__(self, other):
