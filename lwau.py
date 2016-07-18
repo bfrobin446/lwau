@@ -42,10 +42,11 @@ class Mod:
             # GitHub links. We imitate the official AVC clients and fix it
             # up client-side.
             if "github.com" in self.master_version_url:
-                self.master_version_url.replace("github.com",
-                        "raw.githubusercontent.com")
-                self.master_version_url.replace("/tree/", "/")
-                self.master_version_url.replace("/blob", "/")
+                u = self.master_version_url
+                u = u.replace("github.com", "raw.githubusercontent.com")
+                u = u.replace("/tree/", "/")
+                u = u.replace("/blob", "/")
+                self.master_version_url = u
 
             self.master_version_data = json_load_from_url(
                     self.master_version_url)
