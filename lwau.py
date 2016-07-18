@@ -161,7 +161,7 @@ class Mod:
         try:
             wanted_version = next(v for v in mod_data["versions"]
                     if self.available_version.fuzzy_equals(
-                        Version(str=v["friendly_version"])))
+                        Version(v["friendly_version"])))
         except StopIteration:
             print('No Spacedock download for version "{}"'.format(
                     self.available_version))
