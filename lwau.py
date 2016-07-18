@@ -45,7 +45,7 @@ class Mod:
                 u = self.master_version_url
                 u = u.replace("github.com", "raw.githubusercontent.com")
                 u = u.replace("/tree/", "/")
-                u = u.replace("/blob", "/")
+                u = u.replace("/blob/", "/")
                 self.master_version_url = u
 
             self.master_version_data = json_load_from_url(
