@@ -37,6 +37,16 @@ class Mod:
                     self.local_version_data["VERSION"])
 
             self.master_version_url = self.local_version_data["URL"]
+
+            # For some reason, a lot of mod authors don't like using "raw"
+            # GitHub links. We imitate the official AVC clients and fix it
+            # up client-side.
+            if "github.com" in self.master_version_url:
+                self.master_version_url.replace("github.com",
+                        "raw.githubusercontent.com")
+                self.master_version_url.replace("/tree/", "/")
+                self.master_version_url.replace("/blob", "/")
+
             self.master_version_data = json_load_from_url(
                     self.master_version_url)
             self.available_version = Version(
